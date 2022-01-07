@@ -1,55 +1,41 @@
 pragma solidity ^0.6.0;
 
-import "./Item.sol";
+import "./Loan.sol";
 import "./Ownable.sol";
 
-contract ItemManager is Ownable {
+contract LoanManager is Ownable {
 
-    enum SupplyChainSteps {Createds, Paid, Delivered}
+    enum LoanStatus {Created, Approved}
 
-    event SupplyChainStep(uint _itemIndex, uint _step, address _address);
+    event LoanEvent(uint _id, uint _status, address _address);
 
-    struct S_Item {
-        Item _item;
-        ItemManager.SupplyChainSteps _step;
-        string _identifier;
+    struct S_Loan {
+        Loan _loan;
+        LoanStatus _status;
     }
-    mapping(uint => S_Item) public items;
-    uint index;
+    mapping(uint => S_Loan) public loans;
 
+    function createLoan(uint _id, uint _requestedAmount, uint _requestedLoanTenureMonth) public onlyOwner {
+        require(address(loans[_id]._loan) == address(0), "Duplicate loan");
+        require(_requestedAmount > 0 && _requestedLoanTenureMonth > 0, "Requested amount and loan tenure month not valid");
+        Loan loan = new Loan(this, _requestedAmount, _requestedLoanTenureMonth, _id);
+        loans[_id]._loan = loan;
+        loans[_id]._status = LoanStatus.Created;
 
-    function createItem(string memory _identifier, uint _priceInWei) public onlyOwner {
+        emit LoanEvent(_id, uint(loans[_id]._status), address(loan));
 
-        Item item = new Item(this, _priceInWei, index);
-
-        items[index]._item = item;
-
-        items[index]._step = SupplyChainSteps.Created;
-        items[index]._identifier = _identifier;
-
-        emit SupplyChainStep(index, uint(items[index]._step), address(item));
-
-        index++;
     }
 
-    function triggerPayment(uint _index) public payable {
+    function triggerApproveLoan(uint _id) public {
 
-        Item item = items[_index]._item;
+        Loan loan = loans[_id]._loan;
 
-        require(address(item) == msg.sender, "Only items are allowed to update themselves");
+        require(address(loan) == msg.sender, "Only loans are allowed to update themselves");
+        require(loans[_id]._status == LoanStatus.Created, "Loan have been approved");
 
-        require(item.priceInWei() == msg.value, "Not fully paid yet");
+        loans[_id]._status = LoanStatus.Approved;
 
-        require(items[_index]._step == SupplyChainSteps.Created, "Item is further in the supply chain");
-        items[_index]._step = SupplyChainSteps.Paid;
-        emit SupplyChainStep(_index, uint(items[_index]._step), address(item));
+        emit LoanEvent(_id, uint(loans[_id]._status), address(loan));
     }
 
-    function triggerDelivery(uint _index) public onlyOwner {
-        require(items[_index]._step == SupplyChainSteps.Paid, "Item is further in the supply chain");
-        items[_index]._step = SupplyChainSteps.Delivered;
-
-        emit SupplyChainStep(_index, uint(items[_index]._step), address(items[_index]._item));
-
-    }
 }

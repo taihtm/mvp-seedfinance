@@ -1,32 +1,37 @@
 pragma solidity ^0.6.0;
 
-import "./ItemManager.sol";
+import "./LoanManager.sol";
 
-contract Item {
-    uint public priceInWei;
-    uint public paidWei;
-    uint public index;
+contract Loan {
+    uint public requestedAmount;
+    uint public approvedAmount;
+    uint public requestedLoanTenureMonth;
+    uint public approvedLoanTenureMonth;
+    uint public id;
 
-    ItemManager parentContract;
+    LoanManager parentContract;
 
-    constructor(ItemManager _parentContract, uint _priceInWei, uint _index) public {
-        priceInWei = _priceInWei;
-        index = _index;
+    constructor(LoanManager _parentContract, uint _requestedAmount, uint _requestedLoanTenureMonth, uint _id) public {
+        requestedAmount = _requestedAmount;
+        requestedLoanTenureMonth = _requestedLoanTenureMonth;
+        id = _id;
         parentContract = _parentContract;
     }
 
     receive() external payable {
-        require(msg.value == priceInWei, "We don't support partial payments");
-        require(paidWei == 0, "Item is already paid!");
-        paidWei += msg.value;
-
-        (bool success, ) = address(parentContract).call{value:msg.value}(abi.encodeWithSignature("triggerPayment(uint256)", index));
-
-        require(success, "Delivery did not work");
+        
     }
 
     fallback () external {
 
+    }
+
+    function approvedLoan(uint _approvedAmount, uint _approvedLoanTenureMonth) public {
+        require(_approvedAmount > 0 && _approvedLoanTenureMonth > 0, "Approved amount and loan tenure month not valid");
+        approvedAmount = _approvedAmount;
+        approvedLoanTenureMonth = _approvedLoanTenureMonth;
+        (bool success, ) = address(parentContract).call(abi.encodeWithSignature("triggerApproveLoan(uint256)", id));
+        require(success, "Contract Loan Manager rejected to update loan");
     }
 
 }

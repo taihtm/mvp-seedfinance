@@ -1,5 +1,5 @@
-var ItemManager = artifacts.require("./ItemManager.sol");
+var LoanManager = artifacts.require("./LoanManager.sol");
 
 module.exports = function(deployer) {
-    deployer.deploy(ItemManager);
+    deployer.deploy(LoanManager);
 };
